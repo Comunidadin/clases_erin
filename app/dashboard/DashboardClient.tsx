@@ -37,6 +37,9 @@ export default function DashboardClient() {
     if (res.ok) {
       const data = await res.json();
       router.push(`/dashboard/session/${data.session.id}`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || `No se pudo crear la sesión (HTTP ${res.status}).`);
     }
   }
 

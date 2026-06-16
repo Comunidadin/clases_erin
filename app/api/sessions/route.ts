@@ -29,13 +29,31 @@ export async function POST(req: NextRequest) {
   // Ancla la IP pública del aula (la del admin al crear la sesión).
   const networkIp = enforceNetwork ? getClientIp(req) : null;
 
-  const session = await getStore().createSession({
-    name,
-    room: (body.room || "").trim(),
-    ttlSeconds,
-    networkIp,
-    enforceNetwork,
-  });
-
-  return NextResponse.json({ session });
+  try {
+    const session = await getStore().createSession({
+      name,
+      room: (body.room || "").trim(),
+      ttlSeconds,
+      networkIp,
+      enforceNetwork,
+    });
+    return NextResponse.json({ session });
+  } catch (err) {
+    const airtableConfigured = !!(
+      process.env.AIRTABLE_API_KEY &&
+      process.env.AIRTABLE_BASE_ID &&
+      process.env.AIRTABLE_SESSIONS_TABLE &&
+      process.env.AIRTABLE_ATTENDANCE_TABLE
+    );
+    const detail = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      {
+        error: airtableConfigured
+          ? `No se pudo guardar en Airtable: ${detail}`
+          : "Faltan variables de Airtable en el servidor (AIRTABLE_API_KEY / BASE_ID / SESSIONS_TABLE / ATTENDANCE_TABLE).",
+        airtableConfigured,
+      },
+      { status: 500 }
+    );
+  }
 }
